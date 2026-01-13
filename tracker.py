@@ -283,7 +283,7 @@ def add_category(name, color, icon):
 def get_categories():
     conn = create_connection()
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM categories ORDER BY name")
         categories = cursor.fetchall()
         cursor.close()
@@ -312,7 +312,7 @@ def add_expense(amount, category_id, note, expense_date):
 def get_expenses(start_date=None, end_date=None):
     conn = create_connection()
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         query = """
             SELECT e.*, c.name as category_name, c.color, c.icon 
             FROM expenses e 
