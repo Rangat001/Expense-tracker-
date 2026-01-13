@@ -3,7 +3,7 @@ import streamlit as st
 # from pymysql.err import MySQLError
 import psycopg2
 from psycopg2 import OperationalError
-
+from psycopg2.extras import DictCursor
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -192,7 +192,7 @@ def create_connection():
 def init_database():
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         
         cursor.execute("""
                 CREATE TABLE IF NOT EXISTS categories (
@@ -268,7 +268,7 @@ def init_database():
 def add_category(name, color, icon):
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         try:
             cursor.execute("INSERT INTO categories (name, color, icon) VALUES (%s, %s, %s)", (name, color, icon))
             conn.commit()
@@ -283,7 +283,7 @@ def add_category(name, color, icon):
 def get_categories():
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         cursor.execute("SELECT * FROM categories ORDER BY name")
         categories = cursor.fetchall()
         cursor.close()
@@ -294,7 +294,7 @@ def get_categories():
 def add_expense(amount, category_id, note, expense_date):
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         try:
             cursor.execute("""
                 INSERT INTO expenses (amount, category_id, note, expense_date) 
@@ -312,7 +312,7 @@ def add_expense(amount, category_id, note, expense_date):
 def get_expenses(start_date=None, end_date=None):
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         query = """
             SELECT e.*, c.name as category_name, c.color, c.icon 
             FROM expenses e 
@@ -336,7 +336,7 @@ def get_expenses(start_date=None, end_date=None):
 def delete_expense(expense_id):
     conn = create_connection()
     if conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=DictCursor)
         cursor.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
         conn.commit()
         cursor.close()
