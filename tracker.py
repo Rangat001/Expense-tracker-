@@ -17,7 +17,7 @@ st.set_page_config(
 
 # Initialize session state for theme (default is light)
 if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
+    st.session_state.theme = 'dark'
 
 # Dynamic CSS based on theme
 if st.session_state.theme == 'dark':
@@ -394,7 +394,7 @@ if menu == "➕ Add Expense":
             col_a, col_b = st.columns(2)
             
             with col_a:
-                amount = st.number_input("💵 Amount (₹)", min_value=0.01, step=0.01, format="%.2f")
+                amount = st.number_input("💵 Amount (₹)", min_value=0, step=10)
             
             with col_b:
                 expense_date = st.date_input("📅 Date", value=datetime.now().date())
