@@ -1,6 +1,6 @@
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
+import pymysql
+from pymysql.err import MySQLError
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -171,14 +171,14 @@ st.markdown(f"""
 # Database connection
 def create_connection():
     try:
-        connection = mysql.connector.connect(
-            host='localhost',
-            database='expense_tracker',
-            user='root',
-            password=''  # Change this to your MySQL password
+        connection = pymysql.connect(
+            host=st.secrets["host"],
+            database=st.secrets["db"],
+            user=st.secrets["user"],
+            password=st.secrets["password"]  # Change this to your MySQL password
         )
         return connection
-    except Error as e:
+    except MySQLError as e:
         st.error(f"Error connecting to MySQL: {e}")
         return None
 
@@ -204,7 +204,7 @@ def init_database():
                 ADD COLUMN icon VARCHAR(50) DEFAULT '📦' AFTER color
             """)
             conn.commit()
-        except Error as e:
+        except MySQLError as e:
             # Column already exists, ignore the error
             pass
         
@@ -266,7 +266,7 @@ def add_category(name, color, icon):
             cursor.execute("INSERT INTO categories (name, color, icon) VALUES (%s, %s, %s)", (name, color, icon))
             conn.commit()
             return True
-        except Error as e:
+        except MySQLError as e:
             st.error(f"Error: {e}")
             return False
         finally:
@@ -295,7 +295,7 @@ def add_expense(amount, category_id, note, expense_date):
             """, (amount, category_id, note, expense_date))
             conn.commit()
             return True
-        except Error as e:
+        except MySQLError as e:
             st.error(f"Error: {e}")
             return False
         finally:
