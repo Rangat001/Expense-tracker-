@@ -175,7 +175,12 @@ st.markdown(f"""
 def create_connection():
     try:
         connection = psycopg2.connect(
-            st.secrets["url"]
+            host=st.secrets["host"],
+            database=st.secrets["db"],
+            user=st.secrets["user"],
+            password=st.secrets["password"],
+            port=st.secrets["port"] ,
+            pool_mode  = 'transaction'
         )
         return connection
     except OperationalError as e:
