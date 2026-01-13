@@ -207,8 +207,8 @@ def init_database():
         # Add icon column if it doesn't exist (migration)
         try:
             cursor.execute("""
-                ALTER TABLE categories 
-                ADD COLUMN icon VARCHAR(50) DEFAULT '📦' AFTER color
+                    ALTER TABLE categories
+                    ADD COLUMN IF NOT EXISTS icon VARCHAR(50) DEFAULT '📦'
             """)
             conn.commit()
         except OperationalError as e:
