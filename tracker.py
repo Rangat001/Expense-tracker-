@@ -179,7 +179,8 @@ def create_connection():
             database=st.secrets["db"],
             user=st.secrets["user"],
             password=st.secrets["password"],
-            port=st.secrets["port"]  # Change this to your PostgreSQL port
+            port=st.secrets["port"] ,
+            sslmode="require"
         )
         return connection
     except OperationalError as e:
