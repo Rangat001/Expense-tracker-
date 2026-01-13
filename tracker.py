@@ -179,8 +179,9 @@ def create_connection():
             database=st.secrets["db"],
             user=st.secrets["user"],
             password=st.secrets["password"],
-            port=st.secrets["port"] ,
-            pool_mode  = 'transaction'
+            port=st.secrets["port"],
+            sslmode="require" 
+            # pool_mode='transaction'
         )
         return connection
     except OperationalError as e:
