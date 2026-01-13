@@ -178,7 +178,8 @@ def create_connection():
             host=st.secrets["host"],
             database=st.secrets["db"],
             user=st.secrets["user"],
-            password=st.secrets["password"]  # Change this to your MySQL password
+            password=st.secrets["password"],
+            port=st.secrets["port"]  # Change this to your PostgreSQL port
         )
         return connection
     except OperationalError as e:
