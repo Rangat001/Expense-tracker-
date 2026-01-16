@@ -286,6 +286,10 @@ def get_categories():
         cursor = conn.cursor(cursor_factory=DictCursor)
         cursor.execute("SELECT * FROM categories ORDER BY name")
         categories = cursor.fetchall()
+        
+        # Convert RealDictRow to plain dict
+        categories = [dict(row) for row in categories]
+        
         cursor.close()
         conn.close()
         return categories
@@ -328,11 +332,14 @@ def get_expenses(start_date=None, end_date=None):
         
         cursor.execute(query, params)
         expenses = cursor.fetchall()
+        
+        # ADD THIS LINE:
+        expenses = [dict(row) for row in expenses]
+        
         cursor.close()
         conn.close()
         return expenses
     return []
-
 def delete_expense(expense_id):
     conn = create_connection()
     if conn:
