@@ -242,16 +242,12 @@ def init_database():
                     DROP COLUMN IF EXISTS u_id
             """)
             cursor.execute("""
-                    ALTER TABLE categories
-                    ADD CONSTRAINT categories_name_key UNIQUE (name)
-            """)
-            cursor.execute("""
                     DROP INDEX IF EXISTS uq_categories_user_name
             """)
             conn.commit()
         except Error:
-            # Keep app running even when migration is partially applied.
-            pass
+            # psycopg2 marks the transaction as failed after SQL errors, so rollback is required.
+            conn.rollback()
         
         cursor.execute("""
              CREATE TABLE IF NOT EXISTS expenses (
@@ -271,7 +267,7 @@ def init_database():
             """)
             conn.commit()
         except Error:
-            pass
+            conn.rollback()
 
         default_categories = [
             ('Food', '#FF6B6B', '🍔'),
