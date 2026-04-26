@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 import calendar
 
 ADMIN_EMAIL = "rgtwork114@gmail.com"
+SESSION_VALID_DAYS = 3
+
 
 # Page configuration
 st.set_page_config(
@@ -452,6 +454,35 @@ def update_user_verification(user_id, is_verified):
             cursor.close()
             conn.close()
 
+def is_user_verified_by_id(user_id):
+    conn = create_connection()
+    if conn:
+        cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        cursor.execute("SELECT is_verified FROM users WHERE id = %s", (user_id,))
+        row = cursor.fetchone()
+        return bool(row and row["is_verified"])
+    except Error:
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+        return False
+
+def clear_login_session():
+    st.session_state.logged_in = False
+    st.session_state.u_id = None
+    st.session_state.user_email = ""
+    st.session_state.session_expires_at = None
+
+
+def set_login_session(u_id, email):
+    st.session_state.logged_in = True
+    st.session_state.u_id = u_id
+    st.session_state.user_email = email.strip().lower()
+    expires_at = datetime.utcnow() + timedelta(days=SESSION_VALID_DAYS)
+    st.session_state.session_expires_at = expires_at.isoformat()
+
 # Initialize database
 init_database()
 
@@ -462,10 +493,30 @@ if 'u_id' not in st.session_state:
 if 'user_email' not in st.session_state:
     st.session_state.user_email = ""
 
-if not st.session_state.logged_in:
-    st.title("Expense Tracker")
-    st.markdown("Sign in or create an account to continue")
-    tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
+if 'session_expires_at' not in st.session_state:
+    st.session_state.session_expires_at = None
+if 'auth_notice' not in st.session_state:
+    st.session_state.auth_notice = ""
+
+if st.session_state.logged_in:
+    if not st.session_state.session_expires_at:
+        expires_at = datetime.utcnow() + timedelta(days=SESSION_VALID_DAYS)
+        st.session_state.session_expires_at = expires_at.isoformat()
+    try:
+        expires_at = datetime.fromisoformat(st.session_state.session_expires_at)
+    except ValueError:
+        expires_at = datetime.utcnow() - timedelta(seconds=1)
+
+if st.session_state.auth_notice:
+    st.warning(st.session_state.auth_notice)
+    st.session_state.auth_notice = ""
+
+if datetime.utcnow() > expires_at:
+    clear_login_session()
+    st.session_state.auth_notice = "Session expired. Please sign in again."
+elif st.session_state.user_email != ADMIN_EMAIL and not is_user_verified_by_id(st.session_state.u_id):
+    clear_login_session()
+    st.session_state.auth_notice = "Your account is not verified."
 
     with tab1:
         with st.form("signin_form"):
@@ -475,9 +526,7 @@ if not st.session_state.logged_in:
                 if signin_email:
                     u_id = sign_in_user(signin_email)
                     if u_id:
-                        st.session_state.logged_in = True
-                        st.session_state.u_id = u_id
-                        st.session_state.user_email = signin_email.strip().lower()
+                        set_login_session(u_id, signin_email)
                         st.success("Signed in successfully")
                         st.rerun()
                     else:
@@ -493,9 +542,7 @@ if not st.session_state.logged_in:
                 if signup_email:
                     u_id = sign_up_user(signup_email)
                     if u_id:
-                        st.session_state.logged_in = True
-                        st.session_state.u_id = u_id
-                        st.session_state.user_email = signup_email.strip().lower()
+                        set_login_session(u_id, signup_email)
                         st.success("Account created successfully")
                         st.rerun()
                 else:
@@ -554,9 +601,7 @@ with st.sidebar:
         st.rerun()
 
     if st.button("🚪 Sign Out", use_container_width=True, key="sign_out"):
-        st.session_state.logged_in = False
-        st.session_state.u_id = None
-        st.session_state.user_email = ""
+        clear_login_session()
         st.rerun()
 
 # Main content
