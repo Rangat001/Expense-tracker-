@@ -267,6 +267,22 @@ def init_database():
                 ALTER TABLE expenses
                 ADD COLUMN IF NOT EXISTS u_id integer REFERENCES users(id) ON DELETE CASCADE
             """)
+
+            # Backfill legacy column names from older deployments.
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'expenses' AND column_name = 'user_id'
+                )
+            """)
+            has_legacy_user_id = cursor.fetchone()[0]
+            if has_legacy_user_id:
+                cursor.execute("""
+                    UPDATE expenses
+                    SET u_id = user_id
+                    WHERE u_id IS NULL AND user_id IS NOT NULL
+                """)
             conn.commit()
         except Error:
             conn.rollback()
@@ -580,7 +596,12 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### 📅 Filter Period")
-    period = st.selectbox("Period", ["Today", "This Week", "This Month", "This Year", "All Time", "Custom"], label_visibility="collapsed")
+    period = st.selectbox(
+        "Period",
+        ["Today", "This Week", "This Month", "This Year", "All Time", "Custom"],
+        index=4,
+        label_visibility="collapsed"
+    )
     
     today = datetime.now().date()
     
