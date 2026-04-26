@@ -7,7 +7,7 @@ from psycopg2.extras import DictCursor
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import calendar
 
 ADMIN_EMAIL = "rgtwork114@gmail.com"
@@ -456,8 +456,9 @@ def update_user_verification(user_id, is_verified):
 
 def is_user_verified_by_id(user_id):
     conn = create_connection()
-    if conn:
-        cursor = conn.cursor(cursor_factory=DictCursor)
+    if not conn:
+        return False
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         cursor.execute("SELECT is_verified FROM users WHERE id = %s", (user_id,))
         row = cursor.fetchone()
@@ -467,7 +468,6 @@ def is_user_verified_by_id(user_id):
     finally:
         cursor.close()
         conn.close()
-        return False
 
 def clear_login_session():
     st.session_state.logged_in = False
@@ -480,7 +480,7 @@ def set_login_session(u_id, email):
     st.session_state.logged_in = True
     st.session_state.u_id = u_id
     st.session_state.user_email = email.strip().lower()
-    expires_at = datetime.utcnow() + timedelta(days=SESSION_VALID_DAYS)
+    expires_at = datetime.now(UTC) + timedelta(days=SESSION_VALID_DAYS)
     st.session_state.session_expires_at = expires_at.isoformat()
 
 # Initialize database
@@ -500,23 +500,31 @@ if 'auth_notice' not in st.session_state:
 
 if st.session_state.logged_in:
     if not st.session_state.session_expires_at:
-        expires_at = datetime.utcnow() + timedelta(days=SESSION_VALID_DAYS)
+        expires_at = datetime.now(UTC) + timedelta(days=SESSION_VALID_DAYS)
         st.session_state.session_expires_at = expires_at.isoformat()
     try:
         expires_at = datetime.fromisoformat(st.session_state.session_expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
     except ValueError:
-        expires_at = datetime.utcnow() - timedelta(seconds=1)
+        expires_at = datetime.now(UTC) - timedelta(seconds=1)
 
-if st.session_state.auth_notice:
-    st.warning(st.session_state.auth_notice)
-    st.session_state.auth_notice = ""
+    if datetime.now(UTC) > expires_at:
+        clear_login_session()
+        st.session_state.auth_notice = "Session expired. Please sign in again."
+    elif st.session_state.user_email != ADMIN_EMAIL and not is_user_verified_by_id(st.session_state.u_id):
+        clear_login_session()
+        st.session_state.auth_notice = "Your account is not verified."
 
-if datetime.utcnow() > expires_at:
-    clear_login_session()
-    st.session_state.auth_notice = "Session expired. Please sign in again."
-elif st.session_state.user_email != ADMIN_EMAIL and not is_user_verified_by_id(st.session_state.u_id):
-    clear_login_session()
-    st.session_state.auth_notice = "Your account is not verified."
+if not st.session_state.logged_in:
+    st.title("Expense Tracker")
+    st.markdown("Sign in or create an account to continue")
+
+    if st.session_state.auth_notice:
+        st.warning(st.session_state.auth_notice)
+        st.session_state.auth_notice = ""
+
+    tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
 
     with tab1:
         with st.form("signin_form"):
@@ -542,9 +550,15 @@ elif st.session_state.user_email != ADMIN_EMAIL and not is_user_verified_by_id(s
                 if signup_email:
                     u_id = sign_up_user(signup_email)
                     if u_id:
-                        set_login_session(u_id, signup_email)
-                        st.success("Account created successfully")
-                        st.rerun()
+                        normalized_email = signup_email.strip().lower()
+                        if normalized_email == ADMIN_EMAIL:
+                            set_login_session(u_id, signup_email)
+                            st.success("Account created successfully")
+                            st.rerun()
+                        else:
+                            st.success("Account created. Wait for admin verification before sign in.")
+                    else:
+                        st.error("Signup failed")
                 else:
                     st.error("Email is required")
     st.stop()
